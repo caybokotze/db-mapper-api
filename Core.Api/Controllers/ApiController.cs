@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Core.Api.Enum;
 using Core.Api.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,23 +11,20 @@ namespace Core.Api.Controllers;
 [ApiController]
 public class ApiController
 {
-    private readonly DatabaseFactory _databaseFactory;
+    private readonly DatabaseMapper _dbMapper;
 
-    public ApiController(DatabaseFactory databaseFactory)
+    public ApiController(DatabaseMapper dbMapper)
     {
-        _databaseFactory = databaseFactory;
+        _dbMapper = dbMapper;
     }
     
     [HttpPost]
     [Route("db-proxy")]
     public string GetDatabaseData(PostObject postObject)
     {
-        var db = _databaseFactory.Create(DatabaseType.MySql);
+        var mappedResponse = _dbMapper.ExecuteQuery(postObject.ColumnMappings, postObject.Query, postObject.DatabaseType);
 
-        var results = db
-            .ExecuteQuery(postObject.ColumnMappings, postObject.Query, postObject.DatabaseType);
-
-        return JsonSerializer.Serialize(results,
+        return JsonSerializer.Serialize(mappedResponse,
             new JsonSerializerOptions
             {
                 WriteIndented = true

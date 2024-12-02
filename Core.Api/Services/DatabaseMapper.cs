@@ -1,33 +1,32 @@
-﻿using System.Data;
+﻿using System.Transactions;
+using Core.Api.Enum;
+using Core.Api.Interfaces;
 using Dapper;
+using IsolationLevel = System.Data.IsolationLevel;
 
 namespace Core.Api.Services;
 
-
-public interface IDatabaseService
+public class DatabaseMapper : IDbQueryMapper
 {
-    List<Dictionary<string, object>> ExecuteQuery(Dictionary<string, string> mappings, string query, DatabaseType databaseType);
-}
+    private readonly DatabaseConnectionFactory _databaseConnectionFactory;
 
-public class MsSqlService : IDatabaseService
-{
-    private readonly DbConnectionFactory _connectionFactory;
-
-    public MsSqlService(DbConnectionFactory connectionFactory)
+    public DatabaseMapper(DatabaseConnectionFactory databaseConnectionFactory)
     {
-        _connectionFactory = connectionFactory;
+        _databaseConnectionFactory = databaseConnectionFactory;
     }
-    
+
     public List<Dictionary<string, object>> ExecuteQuery(Dictionary<string, string> mappings, string query, DatabaseType databaseType)
     {
-        var connection = _connectionFactory.Create(DatabaseType.MySql);
+        using var connection = _databaseConnectionFactory.Create(databaseType);
+        using var transaction = connection.BeginTransaction(IsolationLevel.ReadCommitted);
+
         var result = connection.Query(query);
         var outputRows = new List<Dictionary<string, object>>();
 
         foreach (var row in result)
         {
             var outputRow = new Dictionary<string, object>();
-            
+
             foreach (KeyValuePair<string, object> column in row)
             {
                 if (mappings.TryGetValue(column.Key, out var columnTitle))
@@ -59,7 +58,7 @@ public class MsSqlService : IDatabaseService
                         {
                             outputRow.Add(columnTitleParts[0], obj);
                         }
-                        
+
                         continue;
 
                         // dynamic obj = new { };
@@ -68,11 +67,11 @@ public class MsSqlService : IDatabaseService
                         //     columnTitleParts[1] = columnValue
                         // };
                     }
-                    
+
                     outputRow.Add(columnTitle, columnValue);
                 }
             }
-            
+
             outputRows.Add(outputRow);
         }
 

@@ -1,12 +1,15 @@
+using Core.Api.Configuration;
 using Core.Api.Services;
 
 var builder = WebApplication.CreateSlimBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-builder.Services.AddTransient<DbConnectionFactory>();
-builder.Services.AddTransient<DatabaseFactory>();
-builder.Services.AddTransient<MsSqlService>();
+
+builder.Services.Configure<Database>(builder.Configuration.GetSection("DbMapper"));
+builder.Services.AddTransient<DatabaseConnectionFactory>();
+
+builder.Configuration.AddEnvironmentVariables();
 
 var app = builder.Build();
 
